@@ -1,0 +1,134 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SlopTube</title>
+<link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#f9f9f9;--card:#fff;--text:#030303;--sub:#606060;--line:#e5e5e5;--red:#ff0000;--blue:#065fd4;--hover:#f2f2f2}
+*{box-sizing:border-box}
+body{margin:0;font-family:Roboto,Arial,sans-serif;background:var(--bg);color:var(--text);font-size:14px}
+a{color:inherit;text-decoration:none}
+button{font-family:inherit;cursor:pointer}
+header{position:fixed;top:0;left:0;right:0;height:56px;background:#fff;display:flex;align-items:center;padding:0 16px;gap:16px;z-index:10;border-bottom:1px solid var(--line)}
+.burger{width:40px;height:40px;border:0;background:none;border-radius:50%;font-size:20px}
+.burger:hover{background:var(--hover)}
+.logo{display:flex;align-items:center;gap:2px;font-size:20px;font-weight:500;letter-spacing:-1px}
+.logo .play{background:var(--red);color:#fff;border-radius:6px;width:30px;height:21px;display:grid;place-items:center;font-size:11px;margin-right:3px}
+.search{flex:1;display:flex;max-width:640px;margin:0 auto}
+.search input{flex:1;height:32px;border:1px solid #ccc;border-right:0;padding:0 8px;font-size:16px;box-shadow:inset 0 1px 2px #eee;min-width:0}
+.search button{width:64px;border:1px solid #d3d3d3;background:#f8f8f8;font-size:15px}
+.hright{display:flex;gap:8px;align-items:center}
+.btn-blue{border:1px solid var(--blue);color:var(--blue);background:#fff;padding:8px 12px;font-weight:500;text-transform:uppercase;font-size:14px;border-radius:2px}
+.avatar{width:32px;height:32px;border-radius:50%;color:#fff;display:grid;place-items:center;font-weight:500;flex-shrink:0;text-transform:uppercase}
+.avatar.big{width:80px;height:80px;font-size:36px}
+.icon-btn{border:0;background:none;font-size:20px;width:40px;height:40px;border-radius:50%}
+.icon-btn:hover{background:var(--hover)}
+nav{position:fixed;top:56px;left:0;bottom:0;width:240px;background:#fff;padding:12px 0;overflow:auto}
+nav a{display:flex;gap:24px;padding:0 24px;height:40px;align-items:center}
+nav a:hover{background:var(--hover)}nav a.on{background:#e5e5e5;font-weight:500}
+nav hr{border:0;border-top:1px solid var(--line);margin:12px 0}
+nav .h{padding:8px 24px;color:var(--sub);text-transform:uppercase;font-weight:500;font-size:14px}
+nav .foot{padding:16px 24px;color:var(--sub);font-size:12px}
+main{margin:56px 0 0 240px;padding:24px}
+body.mini nav{display:none}body.mini main{margin-left:0}
+.section-title{font-size:20px;margin:0 0 16px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:24px 4px}
+.vcard{padding-right:4px;cursor:pointer}
+.thumb{position:relative;aspect-ratio:16/9;background:#222;overflow:hidden}
+.thumb img,.thumb video{width:100%;height:100%;object-fit:cover;display:block}
+.thumb .dur{position:absolute;right:4px;bottom:4px;background:rgba(0,0,0,.8);color:#fff;font-size:12px;font-weight:500;padding:2px 4px;border-radius:2px}
+.vmeta{display:flex;gap:12px;margin-top:12px}
+.vtitle{font-weight:500;font-size:14px;line-height:1.4;max-height:2.8em;overflow:hidden;margin:0 0 6px}
+.small{color:var(--sub);font-size:13px;line-height:1.5}
+.small a:hover{color:var(--text)}
+.watch{display:flex;gap:24px;max-width:1700px}
+.watch .primary{flex:1;min-width:0}
+.watch .secondary{width:402px;flex-shrink:0}
+.player{background:#000;aspect-ratio:16/9;width:100%}
+.player video{width:100%;height:100%}
+.wtitle{font-size:18px;font-weight:400;margin:20px 0 8px}
+.wbar{display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--line);padding-bottom:8px;flex-wrap:wrap;gap:8px}
+.likes{display:flex;gap:16px;align-items:center}
+.likes button{border:0;background:none;color:var(--sub);font-size:13px;font-weight:500;text-transform:uppercase;display:flex;gap:6px;align-items:center;padding:6px}
+.likes button.on{color:var(--blue)}
+.ratio{height:2px;background:#ccc;margin-top:2px}.ratio div{height:100%;background:var(--sub)}
+.owner{display:flex;gap:16px;padding:16px 0;border-bottom:1px solid var(--line);align-items:flex-start}
+.owner .avatar{width:48px;height:48px;font-size:20px}
+.sub-btn{background:#cc0000;color:#fff;border:0;padding:10px 16px;font-weight:500;text-transform:uppercase;border-radius:2px;font-size:14px;margin-left:auto}
+.sub-btn.on{background:#ececec;color:var(--sub)}
+.desc{white-space:pre-wrap;margin-top:12px;line-height:1.5}
+.comments h3{font-size:16px;font-weight:400;margin:24px 0}
+.cform{display:flex;gap:16px;margin-bottom:32px}
+.cform textarea{flex:1;border:0;border-bottom:1px solid #ccc;resize:none;font:inherit;padding:4px 0;outline:none;background:transparent}
+.cform textarea:focus{border-bottom:2px solid #000}
+.comment{display:flex;gap:16px;margin-bottom:16px}
+.comment .avatar{width:40px;height:40px}
+.comment b{font-size:13px;font-weight:500;margin-right:4px}
+.comment p{margin:4px 0;white-space:pre-wrap;line-height:1.4}
+.side-item{display:flex;gap:8px;margin-bottom:8px;cursor:pointer}
+.side-item .thumb{width:168px;flex-shrink:0}
+.side-item .vtitle{font-size:14px;margin-bottom:4px}
+.upnext{display:flex;justify-content:space-between;margin-bottom:12px;font-size:16px}
+.banner{height:160px;background:linear-gradient(120deg,#ff0000,#282828)}
+.chead{background:#fff;padding:16px 10%;display:flex;gap:24px;align-items:center;margin:-24px -24px 24px}
+.chead .info{flex:1}.chead h1{font-size:24px;font-weight:400;margin:0 0 4px}
+.form{background:#fff;max-width:640px;margin:0 auto;padding:24px;border:1px solid var(--line)}
+.form h2{margin-top:0;font-weight:400}
+.form label{display:block;margin:16px 0 6px;color:var(--sub);font-size:13px}
+.form input,.form textarea{width:100%;padding:10px;border:1px solid #ccc;border-radius:2px;font:inherit}
+.form .primary{background:var(--blue);color:#fff;border:0;padding:10px 16px;font-weight:500;text-transform:uppercase;border-radius:2px;margin-top:20px}
+.err{color:#c00;margin-top:12px}
+.empty{text-align:center;color:var(--sub);padding:60px}
+.progress{height:4px;background:#eee;margin-top:16px}.progress div{height:100%;background:var(--red);width:0}
+.menu{position:absolute;right:16px;top:52px;background:#fff;border:1px solid var(--line);box-shadow:0 4px 12px rgba(0,0,0,.15);min-width:220px;padding:8px 0}
+.menu a,.menu button{display:block;width:100%;text-align:left;padding:10px 16px;border:0;background:none;font-size:14px}
+.menu a:hover,.menu button:hover{background:var(--hover)}
+.del{border:0;background:none;color:#c00;font-size:12px;margin-top:4px;padding:0}
+.avatar img{width:100%;height:100%;border-radius:50%;object-fit:cover}
+nav .ch{gap:16px}nav .ch .avatar{width:24px;height:24px;font-size:12px}
+.banner{background-size:cover;background-position:center;aspect-ratio:6.2/1;height:auto;max-height:260px;min-height:100px}
+.chwrap{background:#fff;margin:0 -24px 24px;padding:0 10%}
+.chwrap .chead{margin:0;padding:16px 0;background:none}
+.tabs{display:flex;gap:0}
+.tabs a{padding:0 32px;height:48px;display:flex;align-items:center;text-transform:uppercase;font-weight:500;color:var(--sub);border-bottom:3px solid transparent;font-size:14px}
+.tabs a.on{color:var(--text);border-color:var(--sub)}
+.featured{display:flex;gap:24px;padding-bottom:24px;border-bottom:1px solid var(--line);margin-bottom:24px}
+.featured .player{width:424px;flex-shrink:0}
+.about{display:flex;gap:48px}.about>div:first-child{flex:1}.about .stats{width:300px}
+.about .stats div{border-bottom:1px solid var(--line);padding:12px 0}
+select{padding:6px;font:inherit}
+@media (max-width:1000px){.watch{flex-direction:column}.watch .secondary{width:100%}}
+@media (max-width:790px){nav{display:none}main{margin-left:0;padding:16px}body.mini nav{display:block}.search button{width:44px}.logo span.t{display:none}.chead{padding:16px}}
+</style>
+</head>
+<body>
+<header>
+  <button class="burger" onclick="document.body.classList.toggle('mini')">☰</button>
+  <a href="#/" class="logo"><span class="play">▶</span><span class="t">SlopTube</span><sup style="font-size:10px;color:#606060;font-weight:400;letter-spacing:0">DE</sup></a>
+  <form class="search" onsubmit="event.preventDefault();location.hash='#/search/'+encodeURIComponent(this.q.value)">
+    <input name="q" placeholder="Suchen"><button>🔍</button>
+  </form>
+  <div class="hright" id="hright"></div>
+</header>
+<nav id="nav">
+  <a href="#/" data-r="">🏠 Startseite</a>
+  <a href="#/trending" data-r="trending">🔥 Neu heute</a>
+  <a href="#/subs" data-r="subs">📺 Abos</a>
+  <hr>
+  <a href="#/upload" data-r="upload">⬆️ Hochladen</a>
+  <a href="#/channels" data-r="channels">🎞️ Kanäle</a>
+  <a href="#/studio" data-r="studio">⚙️ Mein Kanal</a>
+  <hr>
+  <div class="h">Abos</div>
+  <div id="subslist"></div>
+  <hr>
+  <div class="foot">© 2019 SlopTube LLC<br>Gehostet auf GitHub Pages</div>
+</nav>
+<main id="app"></main>
+
+<script src="config.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
