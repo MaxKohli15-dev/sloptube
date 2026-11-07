@@ -1,0 +1,10 @@
+name = "sloptube-upload"
+main = "worker.js"
+compatibility_date = "2025-01-01"
+
+[vars]
+REPO = "MaxKohli15-dev/sloptube-videos"
+BRANCH = "main"
+ALLOWED_ORIGINS = "https://maxkohli15-dev.github.io,http://localhost:3001"
+
+# Geheim (NICHT hier eintragen!):  npx wrangler secret put GITHUB_TOKEN

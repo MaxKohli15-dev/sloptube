@@ -8,6 +8,9 @@ window.SLOPTUBE = {
   repo: 'sloptube-videos',
   branch: 'main',
 
+  // Adresse des Cloudflare-Workers (Upload-Server, hält den GitHub-Token geheim)
+  uploadUrl: 'https://sloptube-upload.DEIN-NAME.workers.dev',
+
   // Optional: Kommentare über giscus (https://giscus.app) – leer lassen = keine Kommentare
   giscus: { repo: '', repoId: '', category: '', categoryId: '' },
 };

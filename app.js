@@ -184,10 +184,10 @@ const routes = {
 
   // ----- Upload -----
   async upload() {
-    if (!myChannel() || !store.get('token', '')) return studioIntro('Bevor du hochladen kannst, richte deinen Kanal ein.');
+    if (!myChannel() || !store.get('key', '')) { location.hash = '#/studio'; return; }
     $('#app').innerHTML = `<form class="form" id="up"><h2>Video hochladen</h2>
-      <div class="owner" style="padding-top:0">${av(myChannel())}<div><b>${esc(myChannel())}</b><div class="small">Wird gespeichert als ${today()}/${esc(myChannel())}/Titel · <a href="#/studio" style="color:var(--blue)">Kanal wechseln</a></div></div></div>
-      <label>Videodatei (mp4/webm, max. ~95 MB)</label><input type="file" name="file" accept="video/*" required>
+      <div class="owner" style="padding-top:0">${av(myChannel())}<div><b>${esc(myChannel())}</b><div class="small">Wird gespeichert als ${today()}/${esc(myChannel())}/Titel</div></div></div>
+      <label>Videodatei (mp4/webm, max. 40 MB)</label><input type="file" name="file" accept="video/*" required>
       <label>Titel</label><input name="title" maxlength="100" required>
       <label>Beschreibung (optional)</label><textarea name="desc" rows="4"></textarea>
       <button class="primary">Veröffentlichen</button>
@@ -197,97 +197,111 @@ const routes = {
       const f = e.target, file = f.file.files[0], btn = f.querySelector('button'), st = $('#st'), bar = f.querySelector('.progress div'), err = f.querySelector('.err');
       const title = clean(f.title.value), channel = myChannel();
       if (!title) return err.textContent = 'Titel nötig';
-      if (file.size > 95e6) return err.textContent = 'Datei zu groß (GitHub erlaubt max. ~95 MB)';
+      if (file.size > 40 * 1048576) return err.textContent = 'Datei zu groß (max. 40 MB)';
       btn.disabled = true; err.textContent = '';
-      const base = `${today()}/${channel}/${title}`;
       const ext = (file.name.split('.').pop() || 'mp4').toLowerCase();
       try {
-        st.textContent = 'Erstelle Vorschaubild…'; bar.style.width = '5%';
+        st.textContent = 'Erstelle Vorschaubild…'; bar.style.width = '3%';
         const thumb = await makeImage(file, 480, 270);
-        st.textContent = 'Lade Video hoch… (kann etwas dauern)';
-        await putFile(`${base}.${ext}`, file, p => bar.style.width = (5 + p * 85) + '%');
-        if (thumb) { st.textContent = 'Lade Vorschaubild hoch…'; await putFile(`${base}.jpg`, thumb); }
-        if (f.desc.value.trim()) await putFile(`${base}.txt`, new Blob([f.desc.value]));
+        st.textContent = 'Lade Video hoch…';
+        const res = await send('/video', { channel, title, ext }, file, p => {
+          bar.style.width = (3 + p * 80) + '%';
+          if (p >= 1) st.textContent = 'Wird bei GitHub gespeichert… (kann kurz dauern)';
+        });
+        if (thumb) { st.textContent = 'Lade Vorschaubild hoch…'; await send('/video/extra', { channel, title, kind: 'thumb' }, thumb); }
+        if (f.desc.value.trim()) await send('/video/extra', { channel, title, kind: 'desc' }, new Blob([f.desc.value]));
         bar.style.width = '100%'; st.textContent = 'Fertig! Für alle anderen sichtbar in ca. 1 Minute.';
-        const path = `${base}.${ext}`;
-        store.set('pending', [...store.get('pending', []), { t: Date.now(), path,
-          video: { path, date: today(), channel, title, thumb: thumb ? `${base}.jpg` : null, desc: f.desc.value } }]);
+        store.set('pending', [...store.get('pending', []), { t: Date.now(), path: res.path,
+          video: { path: res.path, date: res.path.slice(0, 10), channel, title, thumb: thumb ? `${res.base}.jpg` : null, desc: f.desc.value } }]);
         DB = null;
-        setTimeout(() => location.hash = '#/watch/' + encodeURIComponent(path), 1200);
+        setTimeout(() => location.hash = '#/watch/' + encodeURIComponent(res.path), 1200);
       } catch (e2) { err.textContent = e2.message; btn.disabled = false; }
     };
   },
 
-  // ----- Kanal einrichten / anpassen -----
+  // ----- Kanal erstellen / anmelden / anpassen (ohne GitHub, mit Kanal-Schlüssel) -----
   async studio() {
+    const name = myChannel(), key = store.get('key', '');
+    if (!name || !key) {
+      $('#app').innerHTML = `<form class="form" id="cr"><h2>Kanal erstellen</h2>
+        <p class="small">Kein Konto nötig. Du bekommst einen <b>Kanal-Schlüssel</b>, mit dem nur du in deinen Kanal hochladen kannst. Er wird in diesem Browser gespeichert.</p>
+        <label>Kanalname</label><input name="name" maxlength="40" required>
+        <button class="primary">Kanal erstellen</button><div class="err"></div></form>
+        <form class="form" id="li" style="margin-top:24px"><h2>Ich habe schon einen Kanal</h2>
+        <p class="small">Auf einem anderen Gerät? Gib deinen Kanalnamen und deinen Kanal-Schlüssel ein.</p>
+        <label>Kanalname</label><input name="name" maxlength="40" required>
+        <label>Kanal-Schlüssel</label><input name="key" type="password" required>
+        <button class="primary">Anmelden</button><div class="err"></div></form>`;
+      $('#cr').onsubmit = async e => {
+        e.preventDefault();
+        const f = e.target, n = clean(f.name.value);
+        f.querySelector('button').disabled = true;
+        try {
+          const r = await send('/channel/create', { channel: n });
+          store.set('channel', n); store.set('key', r.key); DB = null;
+          route();
+        } catch (e2) { f.querySelector('.err').textContent = e2.message; f.querySelector('button').disabled = false; }
+      };
+      $('#li').onsubmit = async e => {
+        e.preventDefault();
+        const f = e.target, n = clean(f.name.value);
+        try {
+          await send('/channel/check', { channel: n }, null, null, f.key.value.trim());
+          store.set('channel', n); store.set('key', f.key.value.trim());
+          location.hash = chLink(n);
+        } catch (e2) { f.querySelector('.err').textContent = e2.message; }
+      };
+      return;
+    }
     const db = await loadDB().catch(() => ({ channels: {} }));
-    const name = myChannel(), c = db.channels[name] || {};
-    $('#app').innerHTML = `<form class="form" id="st"><h2>${name ? 'Kanal anpassen' : 'Kanal erstellen'}</h2>
-      <p class="small">Zum Hochladen brauchst du einen GitHub-Token mit Schreibrecht auf <b>${esc(C.owner)}/${esc(C.repo)}</b>
-        (<a style="color:var(--blue)" target="_blank" href="https://github.com/settings/personal-access-tokens/new">Token erstellen</a>:
-        Repository access → nur <i>${esc(C.repo)}</i>, Permissions → <i>Contents: Read and write</i>).
-        Der Token bleibt nur in diesem Browser. Andere Leute müssen vom Repo-Besitzer als Collaborator eingeladen werden.</p>
-      <label>GitHub-Token</label><input name="token" type="password" value="${esc(store.get('token', ''))}" required>
-      <label>Kanalname</label><input name="name" value="${esc(name)}" maxlength="40" required>
-      <label>Profilbild (optional)</label><input type="file" name="avatar" accept="image/*">
-      <label>Kanalbanner (optional, am besten 2560×1440)</label><input type="file" name="banner" accept="image/*">
+    const c = db.channels[name] || {};
+    $('#app').innerHTML = `<form class="form" id="st"><h2>Kanal anpassen: ${esc(name)}</h2>
+      <div style="background:#fff8e1;border:1px solid #ffe082;padding:12px;margin-bottom:8px">
+        <b>Dein Kanal-Schlüssel</b> – gut aufheben! Ohne ihn kommst du auf anderen Geräten nicht mehr in deinen Kanal.<br>
+        <code style="word-break:break-all;user-select:all">${esc(key)}</code>
+        <button type="button" class="btn-blue" style="margin-left:8px;padding:4px 8px" onclick="navigator.clipboard.writeText(${jsStr(key)});this.textContent='Kopiert'">Kopieren</button></div>
+      <label>Profilbild</label><input type="file" name="avatar" accept="image/*">
+      <label>Kanalbanner (am besten breit, z. B. 2560×1440)</label><input type="file" name="banner" accept="image/*">
       <label>Kanalbeschreibung</label><textarea name="about" rows="4">${esc(c.about || '')}</textarea>
-      <label>Links (einer pro Zeile)</label><textarea name="links" rows="2">${esc((c.links || []).join('\n'))}</textarea>
-      <button class="primary">Speichern</button><div class="small" id="ss"></div><div class="err"></div></form>`;
+      <label>Links (einer pro Zeile, mit https://)</label><textarea name="links" rows="2">${esc((c.links || []).join('\n'))}</textarea>
+      <button class="primary">Speichern</button>
+      <button type="button" class="primary" style="background:#fff;color:#c00;border:1px solid #c00;margin-left:8px" onclick="if(confirm('Abmelden? Ohne Kanal-Schlüssel kommst du nicht wieder rein.')){localStorage.removeItem('key');localStorage.removeItem('channel');route()}">Abmelden</button>
+      <div class="small" id="ss"></div><div class="err"></div></form>`;
     $('#st').onsubmit = async e => {
       e.preventDefault();
       const f = e.target, err = f.querySelector('.err'), ss = $('#ss'), btn = f.querySelector('button');
-      const n = clean(f.name.value);
-      if (!n) return err.textContent = 'Kanalname nötig';
       btn.disabled = true; err.textContent = '';
-      store.set('token', f.token.value.trim());
       try {
-        ss.textContent = 'Prüfe Token…';
-        const r = await fetch(API, { headers: { Authorization: 'Bearer ' + store.get('token') } });
-        const repo = await r.json();
-        if (!r.ok || !repo.permissions?.push) throw new Error('Token ungültig oder ohne Schreibrecht auf das Video-Repo');
-        const owner = db.channels[n];
-        if (owner && n !== name && owner.videos && !confirm(`Den Kanal „${n}“ gibt es schon. Ist das wirklich deiner?`)) throw new Error('Abgebrochen');
-        store.set('channel', n);
-        const dir = `_kanaele/${n}`;
-        if (f.avatar.files[0]) { ss.textContent = 'Lade Profilbild hoch…'; await putFile(`${dir}/avatar.jpg`, await makeImage(f.avatar.files[0], 400, 400, true)); }
-        if (f.banner.files[0]) { ss.textContent = 'Lade Banner hoch…'; await putFile(`${dir}/banner.jpg`, await makeImage(f.banner.files[0], 2048, 330, true)); }
+        if (f.avatar.files[0]) { ss.textContent = 'Lade Profilbild hoch…'; await send('/channel/update', { channel: name, kind: 'avatar' }, await makeImage(f.avatar.files[0], 400, 400, true)); }
+        if (f.banner.files[0]) { ss.textContent = 'Lade Banner hoch…'; await send('/channel/update', { channel: name, kind: 'banner' }, await makeImage(f.banner.files[0], 2048, 330, true)); }
         ss.textContent = 'Speichere Kanalinfo…';
         const links = f.links.value.split('\n').map(s => s.trim()).filter(Boolean);
-        await putFile(`${dir}/info.json`, new Blob([JSON.stringify({ about: f.about.value, links, created: c.joined || today() }, null, 1)]));
+        await send('/channel/update', { channel: name, kind: 'info' }, new Blob([JSON.stringify({ about: f.about.value, links })]));
         ss.textContent = 'Gespeichert! Änderungen sind in ca. 1 Minute für alle sichtbar.';
-        setTimeout(() => location.hash = chLink(n), 1500);
+        setTimeout(() => location.hash = chLink(name), 1500);
       } catch (e2) { err.textContent = e2.message; ss.textContent = ''; btn.disabled = false; }
     };
   },
 };
-function studioIntro(msg) { location.hash = '#/studio'; setTimeout(() => $('#ss') && ($('#ss').textContent = msg), 50); }
-const clean = s => s.trim().replace(/[\\/:*?"<>|#%]/g, '').replace(/\s+/g, ' ');
+const clean = s => s.trim().replace(/[\\/:*?"<>|#%]/g, '').replace(/\s+/g, ' ').replace(/^[._]+/, '');
 
-// ---------- GitHub-Schreibzugriff ----------
-async function putFile(path, blob, onProg) {
-  const token = store.get('token', '');
-  const url = `${API}/contents/${enc(path)}`;
-  // vorhandene Datei? Dann braucht GitHub deren sha zum Überschreiben
-  let sha;
-  const ex = await fetch(url + '?ref=' + C.branch, { headers: { Authorization: 'Bearer ' + token } });
-  if (ex.ok) sha = (await ex.json()).sha;
-  const b64 = await new Promise(r => { const fr = new FileReader(); fr.onload = () => r(fr.result.split(',')[1]); fr.readAsDataURL(blob); });
+// ---------- Upload-Server (Cloudflare Worker) ----------
+function send(path, params, body, onProg, keyOverride) {
   return new Promise((ok, fail) => {
     const x = new XMLHttpRequest();
-    x.open('PUT', url);
-    x.setRequestHeader('Authorization', 'Bearer ' + token);
-    x.setRequestHeader('Accept', 'application/vnd.github+json');
+    x.open('POST', C.uploadUrl.replace(/\/$/, '') + path + '?' + new URLSearchParams(params));
+    const key = keyOverride || store.get('key', '');
+    if (key) x.setRequestHeader('X-Channel-Key', key);
     if (onProg) x.upload.onprogress = ev => onProg(ev.loaded / ev.total);
     x.onload = () => {
-      if (x.status < 300) return ok();
-      let msg = ''; try { msg = JSON.parse(x.responseText).message; } catch {}
-      fail(new Error(x.status === 401 ? 'Token ungültig' : x.status === 403 || x.status === 404 ? 'Token hat keine Schreibrechte auf das Video-Repo' : `GitHub-Fehler ${x.status}: ${msg}`));
+      let j = {}; try { j = JSON.parse(x.responseText); } catch {}
+      x.status < 300 ? ok(j) : fail(new Error(j.error || 'Fehler ' + x.status));
     };
-    x.onerror = () => fail(new Error('Verbindung fehlgeschlagen'));
-    x.send(JSON.stringify({ message: `Upload: ${path}`, content: b64, branch: C.branch, ...(sha ? { sha } : {}) }));
+    x.onerror = () => fail(new Error('Upload-Server nicht erreichbar'));
+    x.send(body || null);
   });
 }
+
 
 // Bild aus Video (Vorschaubild) oder aus Bilddatei (Avatar/Banner, cover=true) erzeugen
 function makeImage(file, W, H, cover) {
