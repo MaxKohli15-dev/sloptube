@@ -19,20 +19,20 @@ export default {
     if (req.method === 'OPTIONS') return new Response(null, { headers: cors });
     const json = (obj, status = 200) => new Response(JSON.stringify(obj), { status, headers: { ...cors, 'Content-Type': 'application/json' } });
     if (req.method !== 'POST') return json({ ok: true, name: 'SlopTube Upload-Server' });
-    if (!allowed.includes(origin)) return json({ error: 'Nicht erlaubt' }, 403);
+    if (!allowed.includes(origin)) return json({ error: 'Not allowed' }, 403);
 
     const gh = github(env);
     const url = new URL(req.url);
     const q = k => clean(url.searchParams.get(k) || '');
     try {
       const channel = q('channel');
-      if (!channel || channel.length > 40) return json({ error: 'Ungültiger Kanalname' }, 400);
+      if (!channel || channel.length > 40) return json({ error: 'Invalid channel name' }, 400);
       const dir = `_kanaele/${channel}`;
       const keyHash = (await gh.get(`${dir}/key.txt`))?.text?.trim();
 
       // --- Kanal erstellen ---
       if (url.pathname === '/channel/create') {
-        if (keyHash) return json({ error: 'Diesen Kanalnamen gibt es schon' }, 409);
+        if (keyHash) return json({ error: 'This channel name is already taken' }, 409);
         const key = [...crypto.getRandomValues(new Uint8Array(24))].map(b => b.toString(16).padStart(2, '0')).join('');
         await gh.put(`${dir}/key.txt`, enc(await sha256(key)), `Neuer Kanal: ${channel}`);
         await gh.put(`${dir}/info.json`, enc(JSON.stringify({ about: '', links: [], created: today() })), `Kanalinfo: ${channel}`);
@@ -40,8 +40,8 @@ export default {
       }
 
       // ab hier: Kanal-Schlüssel nötig
-      if (!keyHash) return json({ error: 'Kanal existiert nicht' }, 404);
-      if (await sha256(req.headers.get('X-Channel-Key') || '') !== keyHash) return json({ error: 'Falscher Kanal-Schlüssel' }, 403);
+      if (!keyHash) return json({ error: "Channel doesn't exist" }, 404);
+      if (await sha256(req.headers.get('X-Channel-Key') || '') !== keyHash) return json({ error: 'Wrong channel key' }, 403);
 
       if (url.pathname === '/channel/check') return json({ ok: true });
 
@@ -49,7 +49,7 @@ export default {
         const kind = url.searchParams.get('kind');
         const body = await readBody(req, MAX_IMAGE);
         if (kind === 'avatar' || kind === 'banner') {
-          if (!isJpeg(body)) return json({ error: 'Nur JPEG' }, 400);
+          if (!isJpeg(body)) return json({ error: 'JPEG only' }, 400);
           await gh.put(`${dir}/${kind}.jpg`, body, `${kind}: ${channel}`);
         } else if (kind === 'info') {
           const info = JSON.parse(new TextDecoder().decode(body));
@@ -60,16 +60,16 @@ export default {
             created: old.created || today(),
           };
           await gh.put(`${dir}/info.json`, enc(JSON.stringify(out, null, 1)), `Kanalinfo: ${channel}`);
-        } else return json({ error: 'Unbekannt' }, 400);
+        } else return json({ error: 'Unknown' }, 400);
         return json({ ok: true });
       }
 
       if (url.pathname === '/video') {
         const title = q('title'), ext = (url.searchParams.get('ext') || '').toLowerCase();
-        if (!title || title.length > 100) return json({ error: 'Ungültiger Titel' }, 400);
-        if (!VIDEO_EXT.includes(ext)) return json({ error: 'Dateityp nicht erlaubt' }, 400);
+        if (!title || title.length > 100) return json({ error: 'Invalid title' }, 400);
+        if (!VIDEO_EXT.includes(ext)) return json({ error: 'File type not allowed' }, 400);
         const base = `${today()}/${channel}/${title}`;
-        if (await gh.exists(`${base}.${ext}`)) return json({ error: 'Du hast heute schon ein Video mit diesem Titel' }, 409);
+        if (await gh.exists(`${base}.${ext}`)) return json({ error: 'You already uploaded a video with this title today' }, 409);
         const video = await readBody(req, MAX_VIDEO);
         await gh.put(`${base}.${ext}`, video, `Video: ${base}`);
         return json({ path: `${base}.${ext}`, base });
@@ -79,7 +79,7 @@ export default {
       const ownPath = () => {
         const p = url.searchParams.get('path') || '';
         const m = p.match(/^(\d{4}-\d{2}-\d{2})\/([^/]+)\/([^/]+)\.([a-z0-9]+)$/i);
-        if (!m || m[2] !== channel || !VIDEO_EXT.includes(m[4].toLowerCase())) { const e = new Error('Nicht dein Video'); e.status = 403; throw e; }
+        if (!m || m[2] !== channel || !VIDEO_EXT.includes(m[4].toLowerCase())) { const e = new Error('Not your video'); e.status = 403; throw e; }
         return { path: p, date: m[1], dir: `${m[1]}/${m[2]}`, title: m[3], ext: m[4], base: `${m[1]}/${m[2]}/${m[3]}` };
       };
       // alle Dateien, die zu einem Video gehören (Video, Bild, Beschreibung)
@@ -88,17 +88,17 @@ export default {
       if (url.pathname === '/video/delete') {
         const v = ownPath();
         const files = await related(v);
-        if (!files.length) return json({ error: 'Video nicht gefunden' }, 404);
+        if (!files.length) return json({ error: 'Video not found' }, 404);
         await gh.commit(files.map(f => ({ path: `${v.dir}/${f.name}`, sha: null })), `Video gelöscht: ${v.base}`);
         return json({ ok: true });
       }
 
       if (url.pathname === '/video/rename') {
         const v = ownPath(), title = q('title');
-        if (!title || title.length > 100) return json({ error: 'Ungültiger Titel' }, 400);
+        if (!title || title.length > 100) return json({ error: 'Invalid title' }, 400);
         if (title === v.title) return json({ path: v.path });
         const files = await related(v);
-        if ((await gh.list(v.dir)).some(f => f.name.replace(/\.[^.]+$/, '') === title)) return json({ error: 'Diesen Titel gibt es an dem Tag schon' }, 409);
+        if ((await gh.list(v.dir)).some(f => f.name.replace(/\.[^.]+$/, '') === title)) return json({ error: 'That title already exists on that day' }, 409);
         const changes = [];
         for (const f of files) {
           const ext = f.name.slice(v.title.length);
@@ -121,12 +121,12 @@ export default {
         const body = await readBody(req, MAX_IMAGE);
         if (kind === 'thumb' && isJpeg(body)) await gh.put(`${base}.jpg`, body, `Vorschaubild: ${base}`);
         else if (kind === 'desc') await gh.put(`${base}.txt`, enc(new TextDecoder().decode(body).slice(0, 5000)), `Beschreibung: ${base}`);
-        else return json({ error: 'Unbekannt' }, 400);
+        else return json({ error: 'Unknown' }, 400);
         return json({ ok: true });
       }
-      return json({ error: 'Unbekannt' }, 404);
+      return json({ error: 'Unknown' }, 404);
     } catch (e) {
-      return json({ error: e.message || 'Serverfehler' }, e.status || 500);
+      return json({ error: e.message || 'Server error' }, e.status || 500);
     }
   },
 };
@@ -195,9 +195,9 @@ async function sha256(s) {
 }
 async function readBody(req, max) {
   const len = +req.headers.get('Content-Length') || 0;
-  if (len > max) { const e = new Error(`Datei zu groß (max. ${Math.round(max / 1048576)} MB)`); e.status = 413; throw e; }
+  if (len > max) { const e = new Error(max > MAX_IMAGE ? 'File too large (max. 40 MB)' : 'File too large'); e.status = 413; throw e; }
   const buf = new Uint8Array(await req.arrayBuffer());
-  if (buf.length > max) { const e = new Error('Datei zu groß'); e.status = 413; throw e; }
+  if (buf.length > max) { const e = new Error('File too large'); e.status = 413; throw e; }
   return buf;
 }
 function b64encode(bytes) {
