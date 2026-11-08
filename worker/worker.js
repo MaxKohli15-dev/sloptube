@@ -75,9 +75,48 @@ export default {
         return json({ path: `${base}.${ext}`, base });
       }
 
-      // Vorschaubild / Beschreibung zu einem eigenen Video von heute
+      // ----- Studio: Videos bearbeiten / löschen (nur eigene) -----
+      const ownPath = () => {
+        const p = url.searchParams.get('path') || '';
+        const m = p.match(/^(\d{4}-\d{2}-\d{2})\/([^/]+)\/([^/]+)\.([a-z0-9]+)$/i);
+        if (!m || m[2] !== channel || !VIDEO_EXT.includes(m[4].toLowerCase())) { const e = new Error('Nicht dein Video'); e.status = 403; throw e; }
+        return { path: p, date: m[1], dir: `${m[1]}/${m[2]}`, title: m[3], ext: m[4], base: `${m[1]}/${m[2]}/${m[3]}` };
+      };
+      // alle Dateien, die zu einem Video gehören (Video, Bild, Beschreibung)
+      const related = async v => (await gh.list(v.dir)).filter(f => f.name.replace(/\.[^.]+$/, '') === v.title);
+
+      if (url.pathname === '/video/delete') {
+        const v = ownPath();
+        const files = await related(v);
+        if (!files.length) return json({ error: 'Video nicht gefunden' }, 404);
+        await gh.commit(files.map(f => ({ path: `${v.dir}/${f.name}`, sha: null })), `Video gelöscht: ${v.base}`);
+        return json({ ok: true });
+      }
+
+      if (url.pathname === '/video/rename') {
+        const v = ownPath(), title = q('title');
+        if (!title || title.length > 100) return json({ error: 'Ungültiger Titel' }, 400);
+        if (title === v.title) return json({ path: v.path });
+        const files = await related(v);
+        if ((await gh.list(v.dir)).some(f => f.name.replace(/\.[^.]+$/, '') === title)) return json({ error: 'Diesen Titel gibt es an dem Tag schon' }, 409);
+        const changes = [];
+        for (const f of files) {
+          const ext = f.name.slice(v.title.length);
+          changes.push({ path: `${v.dir}/${f.name}`, sha: null }, { path: `${v.dir}/${title}${ext}`, sha: f.sha });
+        }
+        await gh.commit(changes, `Umbenannt: ${v.base} → ${title}`);
+        return json({ path: `${v.dir}/${title}.${v.ext}` });
+      }
+
+      // Vorschaubild / Beschreibung setzen (path = eigenes Video; ohne path: heutiges Video mit title)
       if (url.pathname === '/video/extra') {
-        const base = `${today()}/${channel}/${q('title')}`;
+        const base = url.searchParams.get('path') ? ownPath().base : `${today()}/${channel}/${q('title')}`;
+        if (url.searchParams.get('path')) {
+          // altes Vorschaubild in anderem Format entfernen, damit .jpg greift
+          const v = ownPath();
+          const olds = (await related(v)).filter(f => /\.(png|jpeg|webp)$/i.test(f.name));
+          if (olds.length && url.searchParams.get('kind') === 'thumb') await gh.commit(olds.map(f => ({ path: `${v.dir}/${f.name}`, sha: null })), 'Altes Vorschaubild entfernt');
+        }
         const kind = url.searchParams.get('kind');
         const body = await readBody(req, MAX_IMAGE);
         if (kind === 'thumb' && isJpeg(body)) await gh.put(`${base}.jpg`, body, `Vorschaubild: ${base}`);
@@ -104,6 +143,31 @@ function github(env) {
       if (!r.ok) throw new Error('GitHub-Fehler ' + r.status);
       const j = await r.json();
       return { sha: j.sha, text: j.content ? new TextDecoder().decode(b64decode(j.content)) : '' };
+    },
+    async list(dir) {
+      const r = await fetch(u(dir) + `?ref=${env.BRANCH}`, { headers });
+      if (r.status === 404) return [];
+      if (!r.ok) throw new Error('GitHub-Fehler ' + r.status);
+      return (await r.json()).filter(f => f.type === 'file');
+    },
+    // mehrere Dateien in EINEM Commit ändern (sha=null löscht, sha=blob verschiebt ohne neu hochzuladen)
+    async commit(changes, message) {
+      const api = `https://api.github.com/repos/${env.REPO}/git`;
+      const call = async (method, p, body) => {
+        const r = await fetch(api + p, { method, headers, body: body && JSON.stringify(body) });
+        if (!r.ok) { const e = new Error('GitHub-Fehler ' + r.status); e.status = r.status === 422 ? 409 : 502; throw e; }
+        return r.json();
+      };
+      for (let i = 0; i < 3; i++) {
+        try {
+          const ref = await call('GET', `/ref/heads/${env.BRANCH}`);
+          const head = await call('GET', `/commits/${ref.object.sha}`);
+          const tree = await call('POST', '/trees', { base_tree: head.tree.sha, tree: changes.map(c => ({ path: c.path, mode: '100644', type: 'blob', sha: c.sha })) });
+          const commit = await call('POST', '/commits', { message, tree: tree.sha, parents: [ref.object.sha] });
+          await call('PATCH', `/refs/heads/${env.BRANCH}`, { sha: commit.sha });
+          return;
+        } catch (e) { if (i === 2 || e.status !== 409) throw e; }
+      }
     },
     async exists(path) {
       const r = await fetch(u(path) + `?ref=${env.BRANCH}`, { method: 'HEAD', headers });
