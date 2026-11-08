@@ -26,7 +26,7 @@ Ordner = Datum → Kanalname → Video. Die Seite liest das Repo und baut daraus
 
 ## Videos hochladen
 
-- **Über SlopTube:** erst unter „Mein Kanal“ Token, Kanalname, Profilbild und Banner eintragen, dann 📹-Knopf. Braucht einen GitHub-Token mit Schreibrecht aufs Video-Repo
+- **Über SlopTube:** erst unter „Mein Kanal“ Token, Kanalname, Profilbild und Banner eintragen, dann im SlopTube Studio auf ERSTELLEN. Braucht einen GitHub-Token mit Schreibrecht aufs Video-Repo
   (Fine-grained Token, nur dieses Repo, „Contents: Read and write“). Wer hochladen soll, braucht Zugriff
   (z. B. als *Collaborator* eintragen) oder du gibst ihm einen Token.
 - **Oder direkt auf GitHub:** im Video-Repo *Add file → Upload files* und Pfad `Datum/Kanal/` davor schreiben.

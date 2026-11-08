@@ -90,7 +90,7 @@ function grid(list, empty = 'Noch keine Videos da.', showCh = true) {
 const routes = {
   async ''() { $('#app').innerHTML = `<h2 class="section-title">Empfohlen</h2>` + grid((await loadDB()).videos, 'Noch keine Videos da. Lade das erste hoch!'); },
   async trending() {
-    $('#app').innerHTML = `<h2 class="section-title">🔥 Neu heute</h2>` + grid((await loadDB()).videos.filter(v => v.date === today()), 'Heute wurde noch nichts hochgeladen.');
+    $('#app').innerHTML = `<h2 class="section-title">Neu heute</h2>` + grid((await loadDB()).videos.filter(v => v.date === today()), 'Heute wurde noch nichts hochgeladen.');
   },
   async subs() {
     const s = subs();
@@ -129,7 +129,7 @@ const routes = {
       body = (f ? `<div class="featured"><div class="player"><video src="${f.src}" controls preload="metadata"></video></div>
           <div><a href="${link(f)}" style="font-size:18px">${esc(f.title)}</a><div class="small" style="margin:8px 0">${ago(f.date)}</div>
           <div class="desc small">${esc((f.desc || '').slice(0, 300))}</div></div></div>` : '') +
-        `<h2 class="section-title">Uploads <a class="small" href="${chLink(name, 'videos')}" style="color:var(--blue);margin-left:12px">▶ ALLE WIEDERGEBEN</a></h2>` +
+        `<h2 class="section-title">Uploads <a class="small" href="${chLink(name, 'videos')}" style="color:var(--blue);margin-left:12px">ALLE WIEDERGEBEN</a></h2>` +
         grid(vids.slice(1, 13), f ? 'Keine weiteren Videos.' : 'Dieser Kanal hat noch keine Videos.', false);
     } else if (tab === 'videos') {
       if (sort === 'old') vids = vids.slice().reverse();
@@ -161,8 +161,8 @@ const routes = {
       <h1 class="wtitle">${esc(v.title)}</h1>
       <div class="wbar"><div class="small">Veröffentlicht am ${new Date(v.date).toLocaleDateString('de')}</div>
         <div class="likes">
-          <button onclick="navigator.clipboard.writeText(location.href);this.textContent='✔ Kopiert'">↪ Teilen</button>
-          <button onclick="window.open(${jsStr(v.src)})">⬇ Download</button>
+          <button onclick="navigator.clipboard.writeText(location.href);this.textContent='Kopiert'">Teilen</button>
+          <button onclick="window.open(${jsStr(v.src)})">Download</button>
         </div></div>
       <div class="owner">${av(v.channel)}
         <div style="flex:1"><a href="${chLink(v.channel)}" style="font-weight:500">${esc(v.channel)}</a>
@@ -172,7 +172,7 @@ const routes = {
       </div>
       <div class="comments" id="comments"></div>
     </div>
-    <div class="secondary"><div class="upnext"><span>Nächstes Video</span><span class="small">AUTOPLAY ●</span></div>
+    <div class="secondary"><div class="upnext"><span>Nächstes Video</span><span class="small">AUTOPLAY</span></div>
       ${next.slice(0, 20).map(o => `<div class="side-item" onclick="location.hash=${jsStr(link(o))}">${thumbHtml(o)}
         <div><h3 class="vtitle">${esc(o.title)}</h3><div class="small">${esc(o.channel)}<br>${ago(o.date)}</div></div></div>`).join('') || '<div class="small">Keine weiteren Videos</div>'}
     </div></div>`;
@@ -207,12 +207,12 @@ const routes = {
         <aside class="st-side">
           <a href="${chLink(name)}" class="st-me" title="Kanal ansehen"><span class="avatar" style="background:${color(name)}">${avInner(name)}</span>
             <b>Dein Kanal</b><span class="small">${esc(name)}</span></a>
-          ${navItem('dashboard', '▦', 'Dashboard')}${navItem('content', '▶', 'Inhalte')}${navItem('customize', '✎', 'Anpassung')}
-          <a href="${chLink(name)}">↗<span>Kanal ansehen</span></a>
-          <a href="#/">←<span>Zurück zu SlopTube</span></a>
+          ${navItem('dashboard', '', 'Dashboard')}${navItem('content', '', 'Inhalte')}${navItem('customize', '', 'Anpassung')}
+          <a href="${chLink(name)}"><span>Kanal ansehen</span></a>
+          <a href="#/"><span>Zurück zu SlopTube</span></a>
         </aside>
         <section class="st-main"><div class="st-head"><h1>${title}</h1><div>${actions}
-          <button class="st-create" onclick="openUpload()">＋ ERSTELLEN</button></div></div>${body}</section></div>`;
+          <button class="st-create" onclick="openUpload()">ERSTELLEN</button></div></div>${body}</section></div>`;
     };
 
     if (tab === 'dashboard') {
@@ -222,7 +222,7 @@ const routes = {
         <div class="st-card">${last ? `<h3>Neuestes Video</h3>${thumbHtml(last)}
             <p style="font-weight:500;margin:12px 0 4px">${esc(last.title)}</p><div class="small">Veröffentlicht ${ago(last.date)}</div>
             <div style="margin-top:16px;display:flex;gap:8px"><a class="st-link" href="#/studio/edit/${encodeURIComponent(last.id)}">VIDEO BEARBEITEN</a><a class="st-link" href="${link(last)}">ANSEHEN</a></div>`
-          : `<div style="text-align:center;padding:24px 0"><div style="font-size:64px">🎬</div><p>Möchtest du dein erstes Video sehen? Lade eins hoch!</p>
+          : `<div style="text-align:center;padding:24px 0"><p>Möchtest du dein erstes Video sehen? Lade eins hoch!</p>
             <button class="st-primary" onclick="openUpload()">VIDEOS HOCHLADEN</button></div>`}</div>
         <div class="st-card"><h3>Kanalanalysen</h3>
           <div class="small">Videos insgesamt</div><div class="st-big">${mine.length}</div>
@@ -237,7 +237,7 @@ const routes = {
           <p class="small">Tipp: Änderungen siehst du sofort, alle anderen nach ein paar Minuten.</p>
           <hr><h3 style="margin-top:12px">Dein Kanal-Schlüssel</h3>
           <p class="small">Damit meldest du dich auf anderen Geräten an. Gut aufheben!</p>
-          <button class="st-link" onclick="navigator.clipboard.writeText(${jsStr(key)});this.textContent='KOPIERT ✔'">SCHLÜSSEL KOPIEREN</button></div>
+          <button class="st-link" onclick="navigator.clipboard.writeText(${jsStr(key)});this.textContent='KOPIERT'">SCHLÜSSEL KOPIEREN</button></div>
       </div>`);
     }
 
@@ -248,11 +248,11 @@ const routes = {
           <td><div class="st-vid"><a href="#/studio/edit/${encodeURIComponent(v.id)}">${thumbHtml(v)}</a>
             <div><a href="#/studio/edit/${encodeURIComponent(v.id)}" style="font-weight:500">${esc(v.title)}</a>
             <div class="small st-desc">${esc(v.desc || 'Beschreibung hinzufügen')}</div>
-            <div class="st-acts"><a href="#/studio/edit/${encodeURIComponent(v.id)}" title="Details">✎</a><a href="${link(v)}" title="Auf SlopTube ansehen">▶</a>
-            <button title="Löschen" onclick="deleteVideo(${jsStr(v.id)})">🗑</button></div></div></div></td>
-          <td>🌐 Öffentlich</td><td>${new Date(v.date).toLocaleDateString('de')}<div class="small">Veröffentlicht</div></td>
+            <div class="st-acts"><a href="#/studio/edit/${encodeURIComponent(v.id)}" title="Details">Bearbeiten</a><a href="${link(v)}" title="Auf SlopTube ansehen">Ansehen</a>
+            <button title="Löschen" onclick="deleteVideo(${jsStr(v.id)})">Löschen</button></div></div></div></td>
+          <td>Öffentlich</td><td>${new Date(v.date).toLocaleDateString('de')}<div class="small">Veröffentlicht</div></td>
           <td>${fmtSize(v.size)}</td><td></td></tr>`).join('')}</tbody></table>`
-        : `<div class="empty" style="background:#fff"><div style="font-size:64px">📼</div>Keine Inhalte verfügbar<br><br><button class="st-primary" onclick="openUpload()">VIDEOS HOCHLADEN</button></div>`}`);
+        : `<div class="empty" style="background:#fff">Keine Inhalte verfügbar<br><br><button class="st-primary" onclick="openUpload()">VIDEOS HOCHLADEN</button></div>`}`);
       if (rest[0] === 'upload') openUpload();
     }
 
@@ -266,7 +266,7 @@ const routes = {
           <label>Thumbnail</label>
           <div class="small" style="margin-bottom:8px">Lade ein Bild hoch, das zeigt, worum es in deinem Video geht.</div>
           <div class="st-thumbs">
-            <label class="st-upthumb">🖼<br>Thumbnail hochladen<input type="file" name="thumb" accept="image/*" hidden onchange="previewThumb(this)"></label>
+            <label class="st-upthumb">Thumbnail hochladen<input type="file" name="thumb" accept="image/*" hidden onchange="previewThumb(this)"></label>
             <div class="thumb" id="thumbprev">${v.thumbUrl ? `<img src="${v.thumbUrl}">` : `<video src="${v.src}#t=1" preload="metadata" muted></video>`}</div>
           </div>
           <div class="small" id="es" style="margin-top:16px"></div><div class="err"></div>
@@ -274,8 +274,8 @@ const routes = {
         <div class="st-card st-prev"><div class="player"><video src="${v.src}" controls preload="metadata"></video></div>
           <div class="small" style="margin-top:12px">Videolink</div><a href="${link(v)}" style="color:var(--blue);word-break:break-all">${esc(location.origin + location.pathname + link(v))}</a>
           <div class="small" style="margin-top:12px">Dateiname</div><div>${esc(v.path.split('/').pop())}</div>
-          <div class="small" style="margin-top:12px">Sichtbarkeit</div><div>🌐 Öffentlich</div>
-          <button type="button" class="st-link" style="color:#c00;margin-top:16px" onclick="deleteVideo(${jsStr(v.id)})">🗑 VIDEO LÖSCHEN</button>
+          <div class="small" style="margin-top:12px">Sichtbarkeit</div><div>Öffentlich</div>
+          <button type="button" class="st-link" style="color:#c00;margin-top:16px" onclick="deleteVideo(${jsStr(v.id)})">VIDEO LÖSCHEN</button>
         </div></form>`,
         `<a class="st-link" href="#/studio/content">ZURÜCK</a> <button class="st-primary" form="ed">SPEICHERN</button>`);
       $('#ed').onsubmit = async e => {
@@ -305,7 +305,7 @@ const routes = {
           const plain = ({ path, date, channel, title, thumb, desc, size }) => ({ path, date, channel, title, thumb, desc, size });
           store.set('ops', [...store.get('ops', []), { t: Date.now(), del: v.path }, { t: Date.now(), add: plain(updated) }]);
           DB = null;
-          es.textContent = '✔ Gespeichert';
+          es.textContent = 'Gespeichert';
           if (updated.path !== v.path) location.hash = '#/studio/edit/' + encodeURIComponent(updated.path);
         } catch (e2) { err.textContent = e2.message; es.textContent = ''; }
       };
@@ -338,7 +338,7 @@ const routes = {
           cs.textContent = 'Infos werden gespeichert…';
           const links = f.links.value.split('\n').map(s => s.trim()).filter(Boolean);
           await send('/channel/update', { channel: name, kind: 'info' }, new Blob([JSON.stringify({ about: f.about.value, links })]));
-          cs.textContent = '✔ Veröffentlicht. Für alle sichtbar in ein paar Minuten.';
+          cs.textContent = 'Veröffentlicht. Für alle sichtbar in ein paar Minuten.';
         } catch (e2) { err.textContent = e2.message; cs.textContent = ''; }
       };
     }
@@ -348,7 +348,7 @@ const routes = {
 
 // ----- Studio: Anmelden / Kanal erstellen -----
 function studioLogin() {
-  $('#app').innerHTML = `<div style="text-align:center;margin:24px 0 8px"><span class="logo" style="justify-content:center;font-size:28px"><span class="play">▶</span>Studio</span>
+  $('#app').innerHTML = `<div style="text-align:center;margin:24px 0 8px"><span class="logo" style="justify-content:center;font-size:28px"><span class="play"><i></i></span>Studio</span>
     <p class="small">Dein Ort für alles rund um deinen Kanal. Kein Konto nötig.</p></div>
     <form class="form" id="cr"><h2>Kanal erstellen</h2>
     <p class="small">Du bekommst einen <b>Kanal-Schlüssel</b>, mit dem nur du deinen Kanal verwalten kannst. Er wird in diesem Browser gespeichert.</p>
@@ -386,9 +386,9 @@ function openUpload() {
   const m = document.createElement('div');
   m.className = 'st-modal';
   m.innerHTML = `<form class="st-dialog" id="up">
-    <div class="st-dhead"><b>Videos hochladen</b><button type="button" class="icon-btn" onclick="this.closest('.st-modal').remove()">✕</button></div>
+    <div class="st-dhead"><b>Videos hochladen</b><button type="button" class="icon-btn" onclick="this.closest('.st-modal').remove()">×</button></div>
     <div id="step1" class="st-drop">
-      <div style="font-size:72px;color:#909090">⬆</div>
+      
       <p>Videodateien zum Hochladen hierher ziehen und ablegen</p>
       <p class="small">Deine Videos sind sofort öffentlich. Max. 40 MB.</p>
       <label class="st-primary" style="display:inline-block">DATEIEN AUSWÄHLEN<input type="file" name="file" accept="video/*" hidden></label>
@@ -431,7 +431,7 @@ function openUpload() {
       });
       if (thumb) { st.textContent = 'Thumbnail wird hochgeladen…'; await send('/video/extra', { channel, path: res.path, kind: 'thumb' }, thumb); }
       if (f.desc.value.trim()) await send('/video/extra', { channel, path: res.path, kind: 'desc' }, new Blob([f.desc.value]));
-      bar.style.width = '100%'; st.textContent = '✔ Veröffentlicht!';
+      bar.style.width = '100%'; st.textContent = 'Veröffentlicht!';
       store.set('ops', [...store.get('ops', []), { t: Date.now(), add: { path: res.path, date: res.path.slice(0, 10), channel, title,
         thumb: thumb ? `${res.base}.jpg` : null, desc: f.desc.value, size: file.size } }]);
       DB = null;
@@ -504,7 +504,7 @@ function makeImage(file, W, H, cover) {
 function toggleSub(n) { const s = subs(); store.set('subs', s.includes(n) ? s.filter(x => x !== n) : [...s, n]); renderSubs(); route(); }
 
 $('#hright').innerHTML = `<a href="#/studio" class="btn-blue" id="studiobtn">SlopTube Studio</a>
-  <a href="#/studio" id="meav" class="avatar" title="SlopTube Studio" style="background:#888">👤</a>`;
+  <a href="#/studio" id="meav" class="avatar" title="SlopTube Studio" style="background:#ccc"></a>`;
 function renderMe() {
   const n = myChannel(), a = $('#meav');
   if (n) { a.style.background = color(n); a.innerHTML = avInner(n); }
@@ -521,7 +521,7 @@ async function route() {
   document.querySelectorAll('nav a').forEach(a => a.classList.toggle('on', a.dataset.r === name));
   window.scrollTo(0, 0);
   try { await (routes[name] || routes[''])(rest.join('/')); }
-  catch (e) { $('#app').innerHTML = `<div class="empty">😕 ${esc(e.message)}</div>`; }
+  catch (e) { $('#app').innerHTML = `<div class="empty">${esc(e.message)}</div>`; }
   renderMe();
 }
 window.onhashchange = route;
